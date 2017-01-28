@@ -1,171 +1,163 @@
-/*----------------------------------------------------
-SEA
-simple additive synth to create morphing ambient drones in a browser.
-requires p5.js and p5.sound.js
-for 16 harmonic partials, aliasing occurs above midi note 88 (E)
-possible notes = C (24) to C (48) - therefore covers 2 octaves
-*/
-
-new p5(function(p){
-	var holder, holderSize, canvas //holder is the parent div
-	var partials = []
-	var reverb
-
-	var numPartials = 8
-	var fundMidi = 36
-	var fundHz = p.midiToFreq(fundMidi)
-	var fadeTime = 2
-	var klang = 30//variable to hold the amount of randomness in pitches (i.e. the detuning of partials), in Hz
+// var holder, holderSize, canvas
+// window.onload = function(){
 	var isPlaying = false
+	var rolling //var for timer to randomise changes
+	var bgShade = '#323232'
 
-	p.setup = function(){
-		//get the parent div for the canvas
-		holder = p.select('#sketchContainer')
-		//get size of parent div
-		var holderSize = holder.size()
-		//set canvas to with of parent div - makes sketch responsive
-		//make canvas square
-		canvas = p.createCanvas(holderSize.width, holderSize.width) 
-		p.frameRate(24)
-		//global reverb
-		verb = new p5.Reverb()
-		p.createPartials(function(){
-			p.randomiseHz(100) //100% chance
-		})
-		//bind startStop function to clicking on this canvas element
-		canvas.touchStarted(p.startStop)
-		p.textFont('monospace')
+	//note stuff
+	var minorPentatonic = [0, 3, 5, 7, 10]
+	// choose midi note for fundamental between b0 and e2
+	var fundamentalMidi = Math.floor((Math.random() * 17) + 23)
+	//scale to choose notes from when things shift
+	var currentScale = makeScaleHz(fundamentalMidi, minorPentatonic)
+
+	//tone js stuff
+	var verb = new Tone.Freeverb({
+		roomSize: 0.9,
+		dampening: 5000,
+	}).toMaster()
+
+	//create 8 partials
+	var numPartials = 8
+	var partials = []
+	var currentNote = currentScale[0]
+	for(var i = 0; i < numPartials; i++){
+		var currentAmp = i == 0 ? -30 : (Math.random() * -20) - 30
+		var klang = (Math.random() * (i * 10)) - ((i * 10) / 2) //a random offset to the frequency of the harmonic; greater for higher order harmonics
+		partials[i] = new Partial((currentNote * (i + 1)) + klang, currentAmp)
 	}
 
-	//responsively resize canvas if window is resized
-	p.windowResized = function(){
+	function setup(){
+		holder = select('#sketchContainer')
 		holderSize = holder.size()
-		p.resizeCanvas(holderSize.width, holderSize.width)
+		canvas = createCanvas(holderSize.width, holderSize.width)
+		canvas.parent('#sketchContainer')
+		canvas.mousePressed(startStop)
+		frameRate(30)
 	}
 
-	//main draw loop
-	p.draw = function(){
-		p.background(0) //51 = #333
-		if(isPlaying){
-			p.randomiseHz(0.2)
-			p.randomiseAmps(0.7)
-		}
-		p.drawBars()
-		p.writeInfo()
-	}
-
-	//click to play
-	p.startStop = function(){
+	function startStop(){
 		isPlaying = !isPlaying
 		if(isPlaying){
-			for(var i = 0; i < numPartials; i++){
-				partials[i].osc.amp(partials[i].amp, fadeTime)
-			}
+			rolling = setInterval(function(){
+				roll()
+			}, 100)
 		} else {
-			for(var i = 0; i < numPartials; i++){
-				partials[i].osc.amp(0, fadeTime)
-			}
+			clearInterval(rolling)
 		}
+		
+		partials.forEach(function(element){
+			element.toggle(isPlaying)
+		})
 	}
 
-	p.randomiseHz = function(chance){ //% chance of happening
-		var roll = p.random(0, 100)
-		if(roll < chance){
-			klang = p.random(0, 200)
-			fundMidi = Math.floor(p.random(23, 41)) //from b0 (bottom of 5-string bass) to e2
-			fundHz = p.midiToFreq(fundMidi)
-			for(var i = 0; i < numPartials; i++){
-				var	newHz = p.constrain((fundHz * (i + 1)) + p.random(-klang, klang), 20, 20000)
-				partials[i].updateHz(newHz)
-			}	
-		}
+	function windowResized(){
+		holderSize = holder.size()
+		resizeCanvas(holderSize.width, holderSize.width)
 	}
 
-	p.randomiseAmps = function(chance){ //% chance of happening
-		for(var i = 0; i < numPartials; i++){
-			var roll = p.random(0, 100)
-			if(roll < chance){
-				partials[i].updateAmp(p.random(0, 0.9))
-			}
-		}
+	function draw(){
+		background(bgShade)
+		drawBars()
+		writeLabel('//sea', 48)
 	}
 
-	p.drawBars = function(){
-		p.push()
-		var barW = p.width/numPartials;
-		p.noFill()
-		p.strokeWeight(2)
-		p.stroke(100, 240, 255)
-		p.beginShape()
-		for(var i = 0; i < numPartials; i++){
-			var barX = i * barW
-			barY = p.map(partials[i].amplitude.getLevel(), 0, 0.75, p.height, 0)
-			p.vertex(barX, barY)
-			p.vertex(barX + barW, barY)
-		}
-		p.endShape()
-		p.pop()
+	function drawBars(){
+		var w = width/partials.length
+		var hs = partials.map(function(p){
+			return map(p.meter.value, 0, 0.05, height, 0) 
+		})
+		var ls = partials.map(function(p){
+			return map(p.amp, -72, 0, height, 0)
+		})
+		noStroke()
+		fill(120, 180, 200, 130)
+		hs.forEach(function(h, i){
+			rect(i * w, h, w, height) 
+		})
+		noFill()
+		stroke(200)
+		ls.forEach(function(l, i){
+			line(i * w, l, (i * w) + w, l)
+		})
 	}
 
-	p.writeInfo = function(){
-		var t = 'randRange > ' + p.equalLen(klang, 6) + '\n'
-		for(var i = 0; i < numPartials; i++){
-			var h = p.equalLen(partials[i].hz, 6)
-			var a = p.equalLen(partials[i].amp, 6)
-			t += 'partial '+ i + ' > hz: ' + h + ' amp: ' + a + '\n'
-		}
-		p.noStroke()
-		p.fill(255)
-		p.text(t, 10, 20)
+	function writeLabel(txt, sz){
+		push()
+		noStroke()
+		fill(200)
+		textSize(sz)
+		text(txt, 16, sz + 16)
+		pop()
 	}
 
-	//hacky helper function to slice strings to equal length for nicer display
-	p.equalLen = function(i, l){
-		return (i + '      ').slice(0, l)
-	}
-
-	//callback in here so that frequencies are initialised AFTER the objects are created
-	p.createPartials = function(callback){
-		for(var i = 0; i < numPartials; i++){
-			if(i === 0){
-					partials[i] = new p.partial(fundHz, 0.8)
-				} else {
-					partials[i] = new p.partial(fundHz * (i + 1), 0.1)
-			}
-		}
-		callback()
-	}
-
-	//constructor for each partial
-	p.partial = function(_hz, _amp){
-
-		//variables
+	/*
+	------------------------------
+	Tone JS Synth for each Partial
+	------------------------------
+	*/
+	function Partial(_hz, _amp){
 		this.hz = _hz
 		this.amp = _amp
-		
-		//oscillator
-		this.osc = new p5.Oscillator()
-		this.osc.setType('sine')
-		this.osc.freq(this.hz)
-		this.osc.amp(0)
-		this.osc.disconnect()
-		this.osc.connect(verb)
+		this.meter = new Tone.Meter('Level', 0.1)
+		this.osc = new Tone.Oscillator(this.hz, 'sine').connect(this.meter).connect(verb)
+		this.osc.volume.value = -Infinity
 		this.osc.start()
-		verb.process(this.osc, 3, 2) //reverb time is 3 and decay is 1%
 
-		// amplitude analysis for visualisation
-		this.amplitude = new p5.Amplitude()
-		this.amplitude.setInput(this.osc)
-
-		this.updateAmp = function(a){
-			this.amp = a;
-			this.osc.amp(this.amp, fadeTime)
+		this.toggle = function(t){
+			if(t){
+				this.osc.volume.rampTo(this.amp, 1)
+			} else {
+				this.osc.volume.rampTo(-Infinity, 1)
+			}
 		}
 
-		//function to update the oscillator frequency inc randomness
-		this.updateHz = function(h){
-			this.hz = h
-			this.osc.freq(this.hz)
+		this.updateHz = function(newHz){
+			this.hz = newHz
+			this.osc.frequency.value = this.hz
+		}
+
+		this.updateAmplitude = function(newAmp, time){
+			this.amp = newAmp
+			this.osc.volume.rampTo(this.amp, time)
 		}
 	}
-}, 'sketchContainer')
+
+	function midiToFreq(m){
+		var x = (m - 69) / 12
+		return Math.pow(2, x) * 440
+	}
+
+	function makeScaleHz(fund, scale){
+		var ret = scale.map(function(note){
+			return midiToFreq(fund + note)
+		})
+		return ret
+	}
+
+	function updatePartialFreqs(ps, fund){
+		ps.forEach(function(p, i){
+			var klang = (Math.random() * (i * 20)) - ((i * 20) / 2) //a random offset to the frequency of the harmonic; greater for higher order harmonics
+			var f = (fund * (i + 1)) + klang
+			p.updateHz(f)
+		})
+	}
+
+	function randomiseNote(scale){
+		var n = scale[Math.floor(Math.random() * scale.length)]
+		return n
+	}
+
+	//function called by setinterval to randomly alter the pitch and the relative amplitude to the partials
+	function roll(){
+		if(isPlaying){
+			var r = Math.random()
+			if(r > 0.995){
+				currentNote = randomiseNote(currentScale)
+				updatePartialFreqs(partials, currentNote)
+			} else if(r < partials.length / 100){
+				p = Math.floor(r * 100)
+				partials[p].updateAmplitude((Math.random() * -48) - 24, Math.random())
+			}
+		}
+	}
