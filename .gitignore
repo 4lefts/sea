@@ -1,1 +1,21 @@
-seaWithPaper.js
+# npm debugging logs
+npm-debug.log*
+
+# project dependencies / dev-dependencies
+node_modules
+
+# OSX folder attributes
+.DS_store
+
+# temporary files
+*.tmp
+*~
+
+#windows desktop files
+*.ini
+
+# build folder
+public
+
+# any other junk we don't want to commit
+src/seaWithPaper.js

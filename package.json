@@ -1,0 +1,27 @@
+{
+  "name": "sea",
+  "version": "1.0.0",
+  "description": "Additive synthetic drones for your browser; click to start and leave to stand.",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/4lefts/sea.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/4lefts/sea/issues"
+  },
+  "homepage": "https://github.com/4lefts/sea#readme",
+  "devDependencies": {
+    "babel-preset-env": "^1.1.8",
+    "browser-sync": "^2.18.6",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-gh-pages": "^0.5.4"
+  }
+}
