@@ -1,8 +1,9 @@
 'use strict';
 
-var holder, holderSize, canvas;
+var holder = void 0,
+    holderSize = void 0,
+    canvas = void 0;
 var isPlaying = false;
-var rolling; //var for timer to randomise changes
 var bgShade = '#323232';
 
 //note stuff
@@ -19,7 +20,7 @@ var verb = new Tone.Freeverb({
 }).toMaster();
 
 //create 8 partials
-var numPartials = 8;
+var numPartials = 12;
 var partials = [];
 var currentNote = currentScale[0];
 for (var i = 0; i < numPartials; i++) {
@@ -39,6 +40,7 @@ function setup() {
 
 function startStop() {
 	isPlaying = !isPlaying;
+	var rolling = void 0;
 	if (isPlaying) {
 		rolling = setInterval(function () {
 			roll();
@@ -155,9 +157,11 @@ function roll() {
 		var r = Math.random();
 		if (r > 0.995) {
 			currentNote = randomiseNote(currentScale);
+			console.log('changed to note ' + currentNote);
 			updatePartialFreqs(partials, currentNote);
 		} else if (r < partials.length / 100) {
-			p = Math.floor(r * 100);
+			var p = Math.floor(r * 100);
+			console.log('chose partial ' + p);
 			partials[p].updateAmplitude(Math.random() * -48 - 24, Math.random());
 		}
 	}
