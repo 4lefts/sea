@@ -1,28 +1,27 @@
-var holder, holderSize, canvas
-var isPlaying = false
-var rolling //var for timer to randomise changes
-var bgShade = '#323232'
+let holder, holderSize, canvas
+let isPlaying = false
+const bgShade = '#323232'
 
 //note stuff
-var minorPentatonic = [0, 3, 5, 7, 10]
+const minorPentatonic = [0, 3, 5, 7, 10]
 // choose midi note for fundamental between b0 and e2
-var fundamentalMidi = Math.floor((Math.random() * 17) + 23)
+const fundamentalMidi = Math.floor((Math.random() * 17) + 23)
 //scale to choose notes from when things shift
-var currentScale = makeScaleHz(fundamentalMidi, minorPentatonic)
+const currentScale = makeScaleHz(fundamentalMidi, minorPentatonic)
 
 //tone js stuff
-var verb = new Tone.Freeverb({
+const verb = new Tone.Freeverb({
 	roomSize: 0.9,
 	dampening: 5000,
 }).toMaster()
 
 //create 8 partials
-var numPartials = 8
-var partials = []
-var currentNote = currentScale[0]
-for(var i = 0; i < numPartials; i++){
-	var currentAmp = i == 0 ? -30 : (Math.random() * -20) - 30
-	var klang = (Math.random() * (i * 10)) - ((i * 10) / 2) //a random offset to the frequency of the harmonic; greater for higher order harmonics
+const numPartials = 12
+const partials = []
+let currentNote = currentScale[0]
+for(let i = 0; i < numPartials; i++){
+	const currentAmp = i == 0 ? -30 : (Math.random() * -20) - 30
+	const klang = (Math.random() * (i * 10)) - ((i * 10) / 2) //a random offset to the frequency of the harmonic; greater for higher order harmonics
 	partials[i] = new Partial((currentNote * (i + 1)) + klang, currentAmp)
 }
 
@@ -37,6 +36,7 @@ function setup(){
 
 function startStop(){
 	isPlaying = !isPlaying
+	let rolling
 	if(isPlaying){
 		rolling = setInterval(function(){
 			roll()
@@ -62,11 +62,11 @@ function draw(){
 }
 
 function drawBars(){
-	var w = width/partials.length
-	var hs = partials.map((p) => {
+	const w = width/partials.length
+	const hs = partials.map((p) => {
 		return map(p.meter.value, 0, 0.05, height, 0) 
 	})
-	var ls = partials.map((p) => {
+	const ls = partials.map((p) => {
 		return map(p.amp, -72, 0, height, 0)
 	})
 	noStroke()
@@ -123,12 +123,12 @@ function Partial(_hz, _amp){
 }
 
 function midiToFreq(m){
-	var x = (m - 69) / 12
+	const x = (m - 69) / 12
 	return Math.pow(2, x) * 440
 }
 
 function makeScaleHz(fund, scale){
-	var ret = scale.map(function(note){
+	const ret = scale.map(function(note){
 		return midiToFreq(fund + note)
 	})
 	return ret
@@ -136,26 +136,28 @@ function makeScaleHz(fund, scale){
 
 function updatePartialFreqs(ps, fund){
 	ps.forEach(function(p, i){
-		var klang = (Math.random() * (i * 20)) - ((i * 20) / 2) //a random offset to the frequency of the harmonic; greater for higher order harmonics
-		var f = (fund * (i + 1)) + klang
+		const klang = (Math.random() * (i * 20)) - ((i * 20) / 2) //a random offset to the frequency of the harmonic; greater for higher order harmonics
+		const f = (fund * (i + 1)) + klang
 		p.updateHz(f)
 	})
 }
 
 function randomiseNote(scale){
-	var n = scale[Math.floor(Math.random() * scale.length)]
+	const n = scale[Math.floor(Math.random() * scale.length)]
 	return n
 }
 
 //function called by setinterval to randomly alter the pitch and the relative amplitude to the partials
 function roll(){
 	if(isPlaying){
-		var r = Math.random()
+		const r = Math.random()
 		if(r > 0.995){
 			currentNote = randomiseNote(currentScale)
+			console.log('changed to note ' + currentNote)
 			updatePartialFreqs(partials, currentNote)
 		} else if(r < partials.length / 100){
-			p = Math.floor(r * 100)
+			const p = Math.floor(r * 100)
+			console.log('chose partial ' + p)
 			partials[p].updateAmplitude((Math.random() * -48) - 24, Math.random())
 		}
 	}
